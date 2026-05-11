@@ -67,16 +67,16 @@ final class PanelWindowController {
         let safeArea = screen.safeAreaInsets
         let topInset = safeArea.top
 
-        let panelSize = panel.contentView?.fittingSize ?? NSSize(width: 320, height: 36)
-        let width: CGFloat = max(280, panelSize.width)
-        let height: CGFloat = max(36, panelSize.height)
+        let panelSize = panel.contentView?.fittingSize ?? NSSize(width: 360, height: 38)
+        let width: CGFloat = max(360, min(panelSize.width, 480))
+        let height: CGFloat = max(38, panelSize.height)
 
         let x = screenFrame.midX - width / 2
         let y: CGFloat
         if topInset > 0 {
-            y = screenFrame.maxY - topInset / 2 - height / 2
+            y = screenFrame.maxY - max(topInset, height) + 0
         } else {
-            y = screenFrame.maxY - height - 4
+            y = screenFrame.maxY - height - 2
         }
 
         panel.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)

@@ -6,151 +6,170 @@ struct NotchPanelView: View {
     @ObservedObject var appState: AppState
     @ObservedObject var tokenStore: TokenUsageStore
 
+    @State private var isHovering = false
+
+    private var hasPending: Bool { appState.hasPendingInteraction }
+    private var isExpanded: Bool { isHovering || hasPending }
+
     var body: some View {
         VStack(spacing: 0) {
-            islandHeader
-            if appState.isPanelExpanded {
-                sessionsList
-                Divider().background(Color.white.opacity(0.15))
-                usageRow
+            collapsedBar
+            if isExpanded {
+                Divider()
+                    .frame(height: 0.5)
+                    .background(Color.white.opacity(0.08))
+                    .padding(.horizontal, 8)
+                expandedContent
             }
         }
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.black)
+            NotchCapsule(topInset: 0)
+                .fill(Color.black.opacity(0.92))
         )
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(NotchCapsule(topInset: 0))
+        .shadow(color: .black.opacity(0.30), radius: 14, x: 0, y: 8)
         .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.22)) {
-                appState.isPanelExpanded = hovering || appState.hasPendingInteraction
+            withAnimation(.easeInOut(duration: 0.18)) {
+                isHovering = hovering
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: isExpanded)
+        .animation(.easeInOut(duration: 0.2), value: appState.sessions.map(\.id))
     }
 
-    private var islandHeader: some View {
-        HStack(spacing: 8) {
-            statusDot
-            Text(headerTitle)
-                .foregroundColor(.white)
-                .font(.system(size: 12, weight: .medium, design: .rounded))
-                .lineLimit(1)
-            Spacer(minLength: 0)
-            if !appState.isPanelExpanded {
-                Text(compactUsage)
-                    .foregroundColor(.white.opacity(0.7))
-                    .font(.system(size: 11, weight: .regular, design: .monospaced))
-            }
+    private var collapsedBar: some View {
+        HStack(spacing: 10) {
+            leftWing
+            Spacer(minLength: 24)
+            rightWing
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 6)
-        .frame(minWidth: 220, idealWidth: 280)
-    }
-
-    private var sessionsList: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(appState.sessions) { session in
-                sessionRow(session)
-            }
-            if appState.sessions.isEmpty {
-                Text("No active sessions")
-                    .foregroundColor(.white.opacity(0.45))
-                    .font(.system(size: 11, design: .rounded))
-                    .padding(.vertical, 6)
-            }
-        }
-        .padding(.horizontal, 14)
+        .padding(.top, 4)
         .padding(.bottom, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 38)
     }
 
-    private func sessionRow(_ session: SessionInfo) -> some View {
+    private var leftWing: some View {
         HStack(spacing: 8) {
-            Image(systemName: session.source == .claude ? "c.circle.fill" : "x.circle.fill")
-                .foregroundColor(session.source == .claude ? .orange : .green)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(session.title ?? session.source.displayName)
-                    .foregroundColor(.white)
-                    .font(.system(size: 12, weight: .medium))
-                Text(statusLine(session))
-                    .foregroundColor(.white.opacity(0.55))
-                    .font(.system(size: 10))
-                    .lineLimit(1)
-            }
-            Spacer()
-        }
-    }
-
-    private var usageRow: some View {
-        HStack(spacing: 8) {
-            usagePill(label: "Claude", value: tokenStore.todayClaude, color: .orange)
-            usagePill(label: "Codex", value: tokenStore.todayCodex, color: .green)
-            Spacer()
-            Text("Today")
-                .foregroundColor(.white.opacity(0.5))
-                .font(.system(size: 10, weight: .regular, design: .rounded))
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(Color.white.opacity(0.03))
-    }
-
-    private func usagePill(label: String, value: Int, color: Color) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 6, height: 6)
-            Text(label).foregroundColor(.white.opacity(0.7)).font(.system(size: 10))
-            Text(formatTokens(value))
+            statusGlyph
+            Text(headerText)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .foregroundColor(.white)
+                .lineLimit(1)
+        }
+    }
+
+    private var rightWing: some View {
+        HStack(spacing: 6) {
+            agentPill(.claude, value: tokenStore.todayClaude)
+            agentPill(.codex, value: tokenStore.todayCodex)
+        }
+    }
+
+    private func agentPill(_ source: AgentSource, value: Int) -> some View {
+        let active = appState.sessions.contains { $0.source == source && $0.status != .idle && $0.status != .finished }
+        return HStack(spacing: 4) {
+            Circle()
+                .fill(AgentPalette.base(source))
+                .frame(width: 6, height: 6)
+                .opacity(active ? 1.0 : 0.55)
+            Text(formatTokens(value))
                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundColor(.white.opacity(active ? 1.0 : 0.75))
+                .monospacedDigit()
         }
     }
 
-    private var compactUsage: String {
-        formatTokens(tokenStore.todayTotal) + " today"
-    }
-
-    private var headerTitle: String {
-        if appState.hasPendingInteraction { return "Action needed" }
-        if appState.activeSessionCount > 0 {
-            return "\(appState.activeSessionCount) session\(appState.activeSessionCount > 1 ? "s" : "") running"
+    private var statusGlyph: some View {
+        ZStack {
+            Circle().fill(statusColor.opacity(0.18)).frame(width: 18, height: 18)
+            Circle().fill(statusColor).frame(width: 8, height: 8)
         }
-        return "TokenIsland"
-    }
-
-    private var statusDot: some View {
-        Circle()
-            .fill(statusColor)
-            .frame(width: 8, height: 8)
-            .shadow(color: statusColor.opacity(0.6), radius: 4)
+        .shadow(color: statusColor.opacity(0.6), radius: 4)
     }
 
     private var statusColor: Color {
-        if appState.hasPendingInteraction { return .yellow }
+        if hasPending { return .yellow }
         if appState.activeSessionCount > 0 { return .green }
-        return .gray
+        return Color.gray.opacity(0.6)
     }
 
-    private func statusLine(_ session: SessionInfo) -> String {
-        switch session.status {
-        case .running:
-            if let tool = session.lastToolName { return "running · \(tool)" }
-            return "running"
-        case .waitingForPermission:
-            return "waiting for permission"
-        case .waitingForAnswer:
-            return session.pendingPrompt ?? "waiting for answer"
-        case .error: return "error"
-        case .finished: return "finished"
-        case .idle: return "idle"
+    private var headerText: String {
+        if hasPending { return "Action needed" }
+        let n = appState.activeSessionCount
+        if n > 0 { return "\(n) session\(n > 1 ? "s" : "")" }
+        return "TokenIsland"
+    }
+
+    private var expandedContent: some View {
+        VStack(spacing: 8) {
+            ForEach(AgentSource.allCases, id: \.self) { source in
+                AgentRowView(
+                    source: source,
+                    session: latestSession(for: source),
+                    tokensToday: tokens(for: source),
+                    last7Days: tokenStore.last7Days(source: source)
+                )
+            }
+            todayFooter
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 10)
+    }
+
+    private func latestSession(for source: AgentSource) -> SessionInfo? {
+        appState.sessions.first { $0.source == source }
+    }
+
+    private func tokens(for source: AgentSource) -> Int {
+        switch source {
+        case .claude: return tokenStore.todayClaude
+        case .codex: return tokenStore.todayCodex
+        }
+    }
+
+    private var todayFooter: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "chart.bar.fill")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(.white.opacity(0.55))
+            Text("Today total")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(.white.opacity(0.55))
+                .textCase(.uppercase)
+                .tracking(0.8)
+            Spacer()
+            Text(formatTokens(tokenStore.todayTotal))
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+                .monospacedDigit()
+            if let last = tokenStore.lastRefreshed {
+                Text(refreshAge(last))
+                    .font(.system(size: 9))
+                    .foregroundColor(.white.opacity(0.30))
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [Color.white.opacity(0.06), Color.white.opacity(0.02)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                ))
+        )
+    }
+
+    private func refreshAge(_ date: Date) -> String {
+        let secs = Int(Date().timeIntervalSince(date))
+        if secs < 60 { return "\(secs)s ago" }
+        return "\(secs / 60)m ago"
     }
 
     private func formatTokens(_ n: Int) -> String {
-        if n >= 1_000_000 {
-            return String(format: "%.1fM", Double(n) / 1_000_000)
-        }
-        if n >= 1_000 {
-            return String(format: "%.1fK", Double(n) / 1_000)
-        }
+        if n >= 1_000_000 { return String(format: "%.1fM", Double(n) / 1_000_000) }
+        if n >= 1_000 { return String(format: "%.1fK", Double(n) / 1_000) }
         return "\(n)"
     }
 }
