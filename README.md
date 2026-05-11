@@ -39,6 +39,32 @@ There is also a one-shot CLI verifier that prints what the parser sees:
 swift run TokenIslandVerify
 ```
 
+## First launch (DMG / Gatekeeper)
+
+TokenIsland is **ad-hoc signed**, not signed with an Apple Developer ID
+(we deliberately stay free of the $99/year Developer Program). On a clean
+Mac the first time you double-click `TokenIsland.app` from Finder you will
+see a dialog that says *"TokenIsland cannot be opened because Apple cannot
+check it for malicious software."*
+
+This is the expected behaviour for any GitHub-Releases-distributed app.
+Pick **one** workaround:
+
+```bash
+# Option A — Terminal (no UI clicks)
+open /Applications/TokenIsland.app
+
+# Option B — Finder right-click trick
+#   Right-click TokenIsland.app → Open → Open in the dialog.
+#   macOS will remember the trust decision for next time.
+
+# Option C — strip quarantine bit, then double-click works
+xattr -d com.apple.quarantine /Applications/TokenIsland.app
+```
+
+`open` succeeds regardless of `spctl --assess` saying "rejected"; the
+rejection is informational for ad-hoc signatures.
+
 ## Requirements
 
 | Component | Version |

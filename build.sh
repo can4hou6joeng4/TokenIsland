@@ -49,6 +49,7 @@ rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Helpers"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
+mkdir -p "$APP_BUNDLE/Contents/Frameworks"
 
 lipo -create "$ARM_DIR/$APP_NAME" "$X86_DIR/$APP_NAME" \
      -output "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
@@ -62,7 +63,22 @@ if [ -d "$ARM_DIR/${APP_NAME}_${APP_NAME}.bundle" ]; then
     cp -R "$ARM_DIR/${APP_NAME}_${APP_NAME}.bundle" "$APP_BUNDLE/Contents/Resources/"
 fi
 
+echo "==> Embedding Sparkle.framework"
+SPARKLE_SRC=".build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
+if [ ! -d "$SPARKLE_SRC" ]; then
+    echo "Missing Sparkle.framework at $SPARKLE_SRC — run swift build at least once" >&2
+    exit 1
+fi
+ditto "$SPARKLE_SRC" "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"
+
+echo "==> Adding rpath so executables find embedded Frameworks/"
+install_name_tool -add_rpath "@executable_path/../Frameworks" \
+    "$APP_BUNDLE/Contents/MacOS/$APP_NAME" 2>/dev/null || true
+install_name_tool -add_rpath "@executable_path/../../Frameworks" \
+    "$APP_BUNDLE/Contents/Helpers/$BRIDGE_NAME" 2>/dev/null || true
+
 echo "==> Ad-hoc signing (no Apple Developer Program required)"
+codesign --force --deep --sign - "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"
 codesign --force --deep --sign - "$APP_BUNDLE"
 
 echo "==> Bundle ready: $APP_BUNDLE"

@@ -38,6 +38,26 @@ swift run TokenIsland doctor      # 打印安装状态和路径
 swift run TokenIslandVerify       # 验证 parser 在本机数据上的输出
 ```
 
+## 首次启动（DMG / Gatekeeper）
+
+TokenIsland 使用 **ad-hoc 签名**，不走 Apple Developer ID 流程（刻意避开 $99/年的 Developer Program）。在干净的 Mac 上从 Finder 双击 `TokenIsland.app` 首次启动时，会弹出*"TokenIsland 无法打开，因为 Apple 无法检查它是否包含恶意软件"*的对话框。
+
+这是 GitHub Releases 分发的 macOS app 通病。任选一种绕过：
+
+```bash
+# 方法 A — 终端命令（零 UI 操作）
+open /Applications/TokenIsland.app
+
+# 方法 B — Finder 右键技巧
+#   右键 TokenIsland.app → 打开 → 在对话框点"打开"。
+#   macOS 会记住信任决策，下次双击不再阻拦。
+
+# 方法 C — 抹掉 quarantine 属性，之后双击直接生效
+xattr -d com.apple.quarantine /Applications/TokenIsland.app
+```
+
+`spctl --assess` 对 ad-hoc 签名返回"rejected"是正常现象，**不影响 `open` 启动**。
+
 ## 系统要求
 
 | 组件 | 版本 |

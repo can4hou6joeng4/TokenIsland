@@ -19,4 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Notes
 - Hook installer writes JSON via `JSONSerialization` and currently re-orders keys when round-tripping. Round-trip is **semantically** equal to the input; byte-level minimal-diff write is on the roadmap.
-- DMG is ad-hoc signed (`codesign -s -`). On first launch, macOS Gatekeeper may show a warning; use Right-click → Open or `xattr -d com.apple.quarantine` to bypass.
+- DMG is ad-hoc signed (`codesign -s -`). On first launch, macOS Gatekeeper may show a warning; use Right-click → Open or `xattr -d com.apple.quarantine` to bypass. See README §"First launch" for details.
+
+### Fixed
+- `build.sh` now embeds `Sparkle.framework` into `Contents/Frameworks/` and adds the `@executable_path/../Frameworks` rpath. Without this the .app bundle launched from the DMG dyld-failed because `@rpath/Sparkle.framework/...` could not be resolved.
