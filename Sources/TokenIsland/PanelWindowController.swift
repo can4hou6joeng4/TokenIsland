@@ -8,6 +8,9 @@ final class PanelWindowController {
     private let tokenStore: TokenUsageStore
     private var hostingView: NSHostingView<NotchPanelView>?
     private var currentGeom: NotchGeometry = .default
+    private var isExpanded: Bool = false
+
+    private let expandedHeight: CGFloat = 280
 
     init(appState: AppState, tokenStore: TokenUsageStore) {
         self.appState = appState
@@ -45,9 +48,9 @@ final class PanelWindowController {
             appState: appState,
             tokenStore: tokenStore,
             geometry: geom,
-            onHeightChange: { [weak self] h in
+            onHoverChange: { [weak self] expand in
                 Task { @MainActor [weak self] in
-                    self?.resize(to: h)
+                    self?.setExpanded(expand)
                 }
             }
         )
@@ -56,7 +59,7 @@ final class PanelWindowController {
         panel.contentView = hosting
         hostingView = hosting
 
-        positionAtNotch(panel: panel, geom: geom, screen: screen, height: geom.notchHeight)
+        positionAtNotch(panel: panel, geom: geom, screen: screen, height: geom.notchHeight, animate: false)
         panel.orderFrontRegardless()
         window = panel
 
@@ -73,22 +76,25 @@ final class PanelWindowController {
                     appState: self.appState,
                     tokenStore: self.tokenStore,
                     geometry: g,
-                    onHeightChange: { [weak self] h in
-                        Task { @MainActor [weak self] in self?.resize(to: h) }
+                    onHoverChange: { [weak self] expand in
+                        Task { @MainActor [weak self] in self?.setExpanded(expand) }
                     }
                 )
                 self.hostingView?.rootView = rv
-                self.positionAtNotch(panel: w, geom: g, screen: s, height: g.notchHeight)
+                let h = self.isExpanded ? self.expandedHeight : g.notchHeight
+                self.positionAtNotch(panel: w, geom: g, screen: s, height: h, animate: false)
             }
         }
     }
 
     func hide() { window?.orderOut(nil) }
 
-    private func resize(to height: CGFloat) {
+    private func setExpanded(_ expand: Bool) {
+        guard isExpanded != expand else { return }
+        isExpanded = expand
         guard let panel = window, let screen = NSScreen.main else { return }
-        let h = max(currentGeom.notchHeight, height)
-        positionAtNotch(panel: panel, geom: currentGeom, screen: screen, height: h)
+        let h = expand ? expandedHeight : currentGeom.notchHeight
+        positionAtNotch(panel: panel, geom: currentGeom, screen: screen, height: h, animate: true)
     }
 
     private func panelWidth(geom: NotchGeometry, screen: NSScreen) -> CGFloat {
@@ -97,11 +103,11 @@ final class PanelWindowController {
         return min(total, screen.frame.width - 40)
     }
 
-    private func positionAtNotch(panel: NSPanel, geom: NotchGeometry, screen: NSScreen, height: CGFloat) {
+    private func positionAtNotch(panel: NSPanel, geom: NotchGeometry, screen: NSScreen, height: CGFloat, animate: Bool) {
         let screenFrame = screen.frame
         let width = panelWidth(geom: geom, screen: screen)
         let x = screenFrame.midX - width / 2
         let y = screenFrame.maxY - height
-        panel.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true, animate: false)
+        panel.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true, animate: animate)
     }
 }

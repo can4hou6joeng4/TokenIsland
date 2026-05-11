@@ -2,18 +2,11 @@ import AppKit
 import SwiftUI
 import TokenIslandCore
 
-struct ContentHeightPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 38
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
-
 struct NotchPanelView: View {
     @ObservedObject var appState: AppState
     @ObservedObject var tokenStore: TokenUsageStore
     let geometry: NotchGeometry
-    var onHeightChange: (CGFloat) -> Void = { _ in }
+    var onHoverChange: (Bool) -> Void = { _ in }
 
     @State private var isHovering = false
 
@@ -41,18 +34,15 @@ struct NotchPanelView: View {
         )
         .clipShape(NotchPanelShape())
         .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 6)
-        .background(
-            GeometryReader { proxy in
-                Color.clear.preference(key: ContentHeightPreferenceKey.self, value: proxy.size.height)
-            }
-        )
-        .onPreferenceChange(ContentHeightPreferenceKey.self) { h in
-            onHeightChange(h)
-        }
+        .contentShape(NotchPanelShape())
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.18)) {
                 isHovering = hovering
             }
+            onHoverChange(hovering || hasPending)
+        }
+        .onChange(of: hasPending) { _, pending in
+            if pending { onHoverChange(true) }
         }
         .animation(.easeInOut(duration: 0.20), value: isExpanded)
         .animation(.easeInOut(duration: 0.20), value: appState.sessions.map(\.id))
@@ -97,18 +87,32 @@ struct NotchPanelView: View {
                 .fill(AgentPalette.base(source))
                 .frame(width: 6, height: 6)
                 .opacity(active ? 1.0 : 0.65)
-            Text(formatTokens(value))
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundColor(.white.opacity(active ? 1.0 : 0.78))
-                .monospacedDigit()
-                .fixedSize(horizontal: true, vertical: false)
+            if tokenStore.isLoading && value == 0 {
+                Text("…")
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.5))
+                    .frame(width: 28, alignment: .leading)
+            } else {
+                Text(formatTokens(value))
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.white.opacity(active ? 1.0 : 0.78))
+                    .monospacedDigit()
+                    .fixedSize(horizontal: true, vertical: false)
+            }
         }
     }
 
     private var statusGlyph: some View {
         ZStack {
-            Circle().fill(statusColor.opacity(0.20)).frame(width: 18, height: 18)
-            Circle().fill(statusColor).frame(width: 8, height: 8)
+            if tokenStore.isLoading && appState.sessions.isEmpty {
+                ProgressView()
+                    .controlSize(.mini)
+                    .scaleEffect(0.55)
+                    .frame(width: 18, height: 18)
+            } else {
+                Circle().fill(statusColor.opacity(0.20)).frame(width: 18, height: 18)
+                Circle().fill(statusColor).frame(width: 8, height: 8)
+            }
         }
         .shadow(color: statusColor.opacity(0.55), radius: 3)
     }
@@ -121,6 +125,7 @@ struct NotchPanelView: View {
 
     private var headerText: String {
         if hasPending { return "Action needed" }
+        if tokenStore.isLoading && appState.sessions.isEmpty { return "Loading…" }
         let n = appState.activeSessionCount
         if n > 0 { return "\(n) running" }
         return "TokenIsland"
