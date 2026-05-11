@@ -6,6 +6,8 @@ final class PanelWindowController {
     private var window: NSPanel?
     private let appState: AppState
     private let tokenStore: TokenUsageStore
+    private var hostingView: NSHostingView<NotchPanelView>?
+    private var currentGeom: NotchGeometry = .default
 
     init(appState: AppState, tokenStore: TokenUsageStore) {
         self.appState = appState
@@ -17,16 +19,19 @@ final class PanelWindowController {
             window?.orderFrontRegardless()
             return
         }
+        guard let screen = NSScreen.main else { return }
+        let geom = NotchGeometry.resolve(for: screen)
+        currentGeom = geom
 
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 320, height: 160),
+            contentRect: NSRect(x: 0, y: 0, width: panelWidth(geom: geom, screen: screen), height: geom.notchHeight),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         panel.isFloatingPanel = true
         panel.level = .statusBar
-        panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+        panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = false
@@ -34,14 +39,24 @@ final class PanelWindowController {
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.isMovable = false
+        panel.acceptsMouseMovedEvents = true
 
-        let hosting = NSHostingView(
-            rootView: NotchPanelView(appState: appState, tokenStore: tokenStore)
+        let rootView = NotchPanelView(
+            appState: appState,
+            tokenStore: tokenStore,
+            geometry: geom,
+            onHeightChange: { [weak self] h in
+                Task { @MainActor [weak self] in
+                    self?.resize(to: h)
+                }
+            }
         )
+        let hosting = NSHostingView(rootView: rootView)
         hosting.translatesAutoresizingMaskIntoConstraints = false
         panel.contentView = hosting
+        hostingView = hosting
 
-        positionAtNotch(panel: panel)
+        positionAtNotch(panel: panel, geom: geom, screen: screen, height: geom.notchHeight)
         panel.orderFrontRegardless()
         window = panel
 
@@ -51,34 +66,42 @@ final class PanelWindowController {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
-                guard let self, let w = self.window else { return }
-                self.positionAtNotch(panel: w)
+                guard let self, let w = self.window, let s = NSScreen.main else { return }
+                let g = NotchGeometry.resolve(for: s)
+                self.currentGeom = g
+                let rv = NotchPanelView(
+                    appState: self.appState,
+                    tokenStore: self.tokenStore,
+                    geometry: g,
+                    onHeightChange: { [weak self] h in
+                        Task { @MainActor [weak self] in self?.resize(to: h) }
+                    }
+                )
+                self.hostingView?.rootView = rv
+                self.positionAtNotch(panel: w, geom: g, screen: s, height: g.notchHeight)
             }
         }
     }
 
-    func hide() {
-        window?.orderOut(nil)
+    func hide() { window?.orderOut(nil) }
+
+    private func resize(to height: CGFloat) {
+        guard let panel = window, let screen = NSScreen.main else { return }
+        let h = max(currentGeom.notchHeight, height)
+        positionAtNotch(panel: panel, geom: currentGeom, screen: screen, height: h)
     }
 
-    private func positionAtNotch(panel: NSPanel) {
-        guard let screen = NSScreen.screens.first else { return }
+    private func panelWidth(geom: NotchGeometry, screen: NSScreen) -> CGFloat {
+        let wingWidth: CGFloat = 150
+        let total = geom.notchWidth + wingWidth * 2
+        return min(total, screen.frame.width - 40)
+    }
+
+    private func positionAtNotch(panel: NSPanel, geom: NotchGeometry, screen: NSScreen, height: CGFloat) {
         let screenFrame = screen.frame
-        let safeArea = screen.safeAreaInsets
-        let topInset = safeArea.top
-
-        let panelSize = panel.contentView?.fittingSize ?? NSSize(width: 360, height: 38)
-        let width: CGFloat = max(360, min(panelSize.width, 480))
-        let height: CGFloat = max(38, panelSize.height)
-
+        let width = panelWidth(geom: geom, screen: screen)
         let x = screenFrame.midX - width / 2
-        let y: CGFloat
-        if topInset > 0 {
-            y = screenFrame.maxY - max(topInset, height) + 0
-        } else {
-            y = screenFrame.maxY - height - 2
-        }
-
-        panel.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)
+        let y = screenFrame.maxY - height
+        panel.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true, animate: false)
     }
 }

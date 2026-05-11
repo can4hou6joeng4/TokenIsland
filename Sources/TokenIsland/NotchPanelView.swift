@@ -2,9 +2,18 @@ import AppKit
 import SwiftUI
 import TokenIslandCore
 
+struct ContentHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 38
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 struct NotchPanelView: View {
     @ObservedObject var appState: AppState
     @ObservedObject var tokenStore: TokenUsageStore
+    let geometry: NotchGeometry
+    var onHeightChange: (CGFloat) -> Void = { _ in }
 
     @State private var isHovering = false
 
@@ -13,40 +22,54 @@ struct NotchPanelView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            collapsedBar
+            headerRow
+                .frame(height: geometry.notchHeight)
             if isExpanded {
-                Divider()
+                Line()
+                    .stroke(.white.opacity(0.10), style: StrokeStyle(lineWidth: 0.5, dash: [3, 2]))
                     .frame(height: 0.5)
-                    .background(Color.white.opacity(0.08))
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, 14)
                 expandedContent
+                    .padding(.horizontal, 10)
+                    .padding(.top, 8)
+                    .padding(.bottom, 10)
             }
         }
         .background(
-            NotchCapsule(topInset: 0)
-                .fill(Color.black.opacity(0.92))
+            NotchPanelShape()
+                .fill(Color.black)
         )
-        .clipShape(NotchCapsule(topInset: 0))
-        .shadow(color: .black.opacity(0.30), radius: 14, x: 0, y: 8)
+        .clipShape(NotchPanelShape())
+        .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 6)
+        .background(
+            GeometryReader { proxy in
+                Color.clear.preference(key: ContentHeightPreferenceKey.self, value: proxy.size.height)
+            }
+        )
+        .onPreferenceChange(ContentHeightPreferenceKey.self) { h in
+            onHeightChange(h)
+        }
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.18)) {
                 isHovering = hovering
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: isExpanded)
-        .animation(.easeInOut(duration: 0.2), value: appState.sessions.map(\.id))
+        .animation(.easeInOut(duration: 0.20), value: isExpanded)
+        .animation(.easeInOut(duration: 0.20), value: appState.sessions.map(\.id))
     }
 
-    private var collapsedBar: some View {
-        HStack(spacing: 10) {
+    private var headerRow: some View {
+        HStack(spacing: 0) {
             leftWing
-            Spacer(minLength: 24)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 12)
+            if geometry.hasNotch {
+                Spacer(minLength: geometry.notchWidth)
+            }
             rightWing
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.trailing, 12)
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 4)
-        .padding(.bottom, 8)
-        .frame(height: 38)
     }
 
     private var leftWing: some View {
@@ -56,11 +79,12 @@ struct NotchPanelView: View {
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .foregroundColor(.white)
                 .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
     }
 
     private var rightWing: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             agentPill(.claude, value: tokenStore.todayClaude)
             agentPill(.codex, value: tokenStore.todayCodex)
         }
@@ -72,32 +96,33 @@ struct NotchPanelView: View {
             Circle()
                 .fill(AgentPalette.base(source))
                 .frame(width: 6, height: 6)
-                .opacity(active ? 1.0 : 0.55)
+                .opacity(active ? 1.0 : 0.65)
             Text(formatTokens(value))
                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundColor(.white.opacity(active ? 1.0 : 0.75))
+                .foregroundColor(.white.opacity(active ? 1.0 : 0.78))
                 .monospacedDigit()
+                .fixedSize(horizontal: true, vertical: false)
         }
     }
 
     private var statusGlyph: some View {
         ZStack {
-            Circle().fill(statusColor.opacity(0.18)).frame(width: 18, height: 18)
+            Circle().fill(statusColor.opacity(0.20)).frame(width: 18, height: 18)
             Circle().fill(statusColor).frame(width: 8, height: 8)
         }
-        .shadow(color: statusColor.opacity(0.6), radius: 4)
+        .shadow(color: statusColor.opacity(0.55), radius: 3)
     }
 
     private var statusColor: Color {
         if hasPending { return .yellow }
         if appState.activeSessionCount > 0 { return .green }
-        return Color.gray.opacity(0.6)
+        return Color.gray.opacity(0.55)
     }
 
     private var headerText: String {
         if hasPending { return "Action needed" }
         let n = appState.activeSessionCount
-        if n > 0 { return "\(n) session\(n > 1 ? "s" : "")" }
+        if n > 0 { return "\(n) running" }
         return "TokenIsland"
     }
 
@@ -113,8 +138,7 @@ struct NotchPanelView: View {
             }
             todayFooter
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 10)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private func latestSession(for source: AgentSource) -> SessionInfo? {
@@ -153,11 +177,7 @@ struct NotchPanelView: View {
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(LinearGradient(
-                    colors: [Color.white.opacity(0.06), Color.white.opacity(0.02)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                ))
+                .fill(Color.white.opacity(0.05))
         )
     }
 
@@ -171,5 +191,14 @@ struct NotchPanelView: View {
         if n >= 1_000_000 { return String(format: "%.1fM", Double(n) / 1_000_000) }
         if n >= 1_000 { return String(format: "%.1fK", Double(n) / 1_000) }
         return "\(n)"
+    }
+}
+
+private struct Line: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX, y: rect.midY))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        return p
     }
 }
