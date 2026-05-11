@@ -1,0 +1,22 @@
+# Changelog
+
+All notable changes to this project are documented here.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- SwiftPM project skeleton with `TokenIslandCore`, `TokenIsland`, `TokenIslandBridge`, and `TokenIslandVerify` targets.
+- Claude jsonl parser (`Sources/TokenIslandCore/Parsing/ClaudeJsonlParser.swift`).
+- Codex jsonl parser (`Sources/TokenIslandCore/Parsing/CodexJsonlParser.swift`).
+- Notch panel UI (`NotchPanelView`) with idle/expanded states and a Today total row.
+- `HookServer` Unix-domain socket IPC, listening at `/tmp/tokenisland-<uid>.sock`.
+- `HookInstaller` that safely merges hook entries into `~/.claude/settings.json` and `$CODEX_HOME/hooks.json`, with reversible uninstall.
+- CLI subcommands: `install`, `uninstall`, `doctor`, `help`.
+- `build.sh` producing a universal `.app` bundle and DMG.
+- GitHub Actions CI and Release workflows.
+
+### Notes
+- Hook installer writes JSON via `JSONSerialization` and currently re-orders keys when round-tripping. Round-trip is **semantically** equal to the input; byte-level minimal-diff write is on the roadmap.
+- DMG is ad-hoc signed (`codesign -s -`). On first launch, macOS Gatekeeper may show a warning; use Right-click → Open or `xattr -d com.apple.quarantine` to bypass.

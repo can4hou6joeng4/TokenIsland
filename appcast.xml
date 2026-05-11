@@ -1,0 +1,38 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+    <channel>
+        <title>TokenIsland</title>
+        <link>https://raw.githubusercontent.com/REPLACE_WITH_OWNER/TokenIsland/main/appcast.xml</link>
+        <description>Most recent changes to TokenIsland</description>
+        <language>en</language>
+        <!--
+            Each <item> block describes one release. Sparkle picks the newest one whose
+            sparkle:version is greater than the installed CFBundleVersion.
+            For production releases:
+              1. Sign the DMG with sign_update from Sparkle tools (ed25519 key required).
+              2. Replace REPLACE_WITH_OWNER and the enclosure URL with the actual
+                 GitHub Release download link.
+              3. Bump sparkle:version (build number) and sparkle:shortVersionString.
+        -->
+        <item>
+            <title>Version 0.1.0</title>
+            <pubDate>Wed, 11 May 2026 00:00:00 +0000</pubDate>
+            <sparkle:version>1</sparkle:version>
+            <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+                <h2>Initial pre-alpha</h2>
+                <ul>
+                    <li>Notch panel with Today token row (Claude + Codex)</li>
+                    <li>Hook IPC over Unix-domain socket</li>
+                    <li>Reversible installer for ~/.claude/settings.json and ~/.codex/hooks.json</li>
+                </ul>
+            ]]></description>
+            <enclosure
+                url="https://github.com/REPLACE_WITH_OWNER/TokenIsland/releases/download/v0.1.0/TokenIsland-0.1.0.dmg"
+                sparkle:edSignature="REPLACE_WITH_ED25519_SIGNATURE"
+                length="0"
+                type="application/octet-stream" />
+        </item>
+    </channel>
+</rss>

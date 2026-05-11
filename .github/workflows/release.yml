@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Build & package
+        run: ./build.sh --ship
+
+      - name: Compute checksum and version
+        id: meta
+        run: |
+          VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist)
+          DMG="dist/TokenIsland-${VERSION}.dmg"
+          SHA=$(shasum -a 256 "${DMG}" | awk '{print $1}')
+          {
+            echo "version=${VERSION}"
+            echo "sha256=${SHA}"
+            echo "dmg=${DMG}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Generate release notes
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          SHA256: ${{ steps.meta.outputs.sha256 }}
+        run: |
+          {
+            printf '## TokenIsland v%s\n\n' "${VERSION}"
+            printf 'Notch panel for Claude Code & Codex CLI on macOS 14+.\n\n'
+            printf '### Install (manual)\n\n'
+            printf '1. Download `TokenIsland-%s.dmg` below\n' "${VERSION}"
+            printf '2. Open the DMG and drag `TokenIsland.app` to Applications\n'
+            printf '3. On first launch, right-click then Open if Gatekeeper warns\n'
+            printf '4. From Terminal: `/Applications/TokenIsland.app/Contents/MacOS/TokenIsland install`\n\n'
+            printf 'SHA256: `%s`\n' "${SHA256}"
+          } > RELEASE_NOTES.md
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.dmg
+            dist/*.dmg.sha256
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: false
