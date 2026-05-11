@@ -6,46 +6,53 @@ struct NotchPanelView: View {
     @ObservedObject var appState: AppState
     @ObservedObject var tokenStore: TokenUsageStore
     let geometry: NotchGeometry
-    var onHoverChange: (Bool) -> Void = { _ in }
 
     @State private var isHovering = false
+    @State private var hoverTimer: Timer?
 
     private var hasPending: Bool { appState.hasPendingInteraction }
     private var isExpanded: Bool { isHovering || hasPending }
 
     var body: some View {
-        VStack(spacing: 0) {
-            headerRow
-                .frame(height: geometry.notchHeight)
-            if isExpanded {
-                Line()
-                    .stroke(.white.opacity(0.10), style: StrokeStyle(lineWidth: 0.5, dash: [3, 2]))
-                    .frame(height: 0.5)
-                    .padding(.horizontal, 14)
-                expandedContent
-                    .padding(.horizontal, 10)
-                    .padding(.top, 8)
-                    .padding(.bottom, 10)
+        ZStack(alignment: .top) {
+            Color.clear
+                .allowsHitTesting(false)
+
+            VStack(spacing: 0) {
+                headerRow
+                    .frame(height: geometry.notchHeight)
+                if isExpanded {
+                    Divider()
+                        .background(Color.white.opacity(0.10))
+                        .padding(.horizontal, 14)
+                    expandedContent
+                        .padding(.horizontal, 10)
+                        .padding(.top, 8)
+                        .padding(.bottom, 10)
+                }
             }
-        }
-        .background(
-            NotchPanelShape()
-                .fill(Color.black)
-        )
-        .clipShape(NotchPanelShape())
-        .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 6)
-        .contentShape(NotchPanelShape())
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.18)) {
-                isHovering = hovering
+            .background(
+                NotchPanelShape().fill(Color.black)
+            )
+            .clipShape(NotchPanelShape())
+            .contentShape(NotchPanelShape())
+            .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 6)
+            .onHover { hovering in
+                hoverTimer?.invalidate()
+                hoverTimer = nil
+                if hovering {
+                    withAnimation(.easeInOut(duration: 0.18)) { isHovering = true }
+                } else {
+                    hoverTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { _ in
+                        Task { @MainActor in
+                            withAnimation(.easeInOut(duration: 0.18)) { isHovering = false }
+                        }
+                    }
+                }
             }
-            onHoverChange(hovering || hasPending)
+            .animation(.easeInOut(duration: 0.20), value: isExpanded)
         }
-        .onChange(of: hasPending) { _, pending in
-            if pending { onHoverChange(true) }
-        }
-        .animation(.easeInOut(duration: 0.20), value: isExpanded)
-        .animation(.easeInOut(duration: 0.20), value: appState.sessions.map(\.id))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private var headerRow: some View {
@@ -196,14 +203,5 @@ struct NotchPanelView: View {
         if n >= 1_000_000 { return String(format: "%.1fM", Double(n) / 1_000_000) }
         if n >= 1_000 { return String(format: "%.1fK", Double(n) / 1_000) }
         return "\(n)"
-    }
-}
-
-private struct Line: Shape {
-    func path(in rect: CGRect) -> Path {
-        var p = Path()
-        p.move(to: CGPoint(x: rect.minX, y: rect.midY))
-        p.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
-        return p
     }
 }

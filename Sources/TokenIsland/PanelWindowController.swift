@@ -8,9 +8,8 @@ final class PanelWindowController {
     private let tokenStore: TokenUsageStore
     private var hostingView: NSHostingView<NotchPanelView>?
     private var currentGeom: NotchGeometry = .default
-    private var isExpanded: Bool = false
 
-    private let expandedHeight: CGFloat = 280
+    private let fixedPanelHeight: CGFloat = 320
 
     init(appState: AppState, tokenStore: TokenUsageStore) {
         self.appState = appState
@@ -26,19 +25,21 @@ final class PanelWindowController {
         let geom = NotchGeometry.resolve(for: screen)
         currentGeom = geom
 
+        let width = panelWidth(geom: geom, screen: screen)
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: panelWidth(geom: geom, screen: screen), height: geom.notchHeight),
+            contentRect: NSRect(x: 0, y: 0, width: width, height: fixedPanelHeight),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         panel.isFloatingPanel = true
-        panel.level = .statusBar
-        panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+        panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.mainMenuWindow)) + 2)
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = false
+        panel.isMovableByWindowBackground = false
         panel.hidesOnDeactivate = false
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.isMovable = false
@@ -47,19 +48,14 @@ final class PanelWindowController {
         let rootView = NotchPanelView(
             appState: appState,
             tokenStore: tokenStore,
-            geometry: geom,
-            onHoverChange: { [weak self] expand in
-                Task { @MainActor [weak self] in
-                    self?.setExpanded(expand)
-                }
-            }
+            geometry: geom
         )
         let hosting = NSHostingView(rootView: rootView)
         hosting.translatesAutoresizingMaskIntoConstraints = false
         panel.contentView = hosting
         hostingView = hosting
 
-        positionAtNotch(panel: panel, geom: geom, screen: screen, height: geom.notchHeight, animate: false)
+        position(panel: panel, geom: geom, screen: screen)
         panel.orderFrontRegardless()
         window = panel
 
@@ -72,30 +68,17 @@ final class PanelWindowController {
                 guard let self, let w = self.window, let s = NSScreen.main else { return }
                 let g = NotchGeometry.resolve(for: s)
                 self.currentGeom = g
-                let rv = NotchPanelView(
+                self.hostingView?.rootView = NotchPanelView(
                     appState: self.appState,
                     tokenStore: self.tokenStore,
-                    geometry: g,
-                    onHoverChange: { [weak self] expand in
-                        Task { @MainActor [weak self] in self?.setExpanded(expand) }
-                    }
+                    geometry: g
                 )
-                self.hostingView?.rootView = rv
-                let h = self.isExpanded ? self.expandedHeight : g.notchHeight
-                self.positionAtNotch(panel: w, geom: g, screen: s, height: h, animate: false)
+                self.position(panel: w, geom: g, screen: s)
             }
         }
     }
 
     func hide() { window?.orderOut(nil) }
-
-    private func setExpanded(_ expand: Bool) {
-        guard isExpanded != expand else { return }
-        isExpanded = expand
-        guard let panel = window, let screen = NSScreen.main else { return }
-        let h = expand ? expandedHeight : currentGeom.notchHeight
-        positionAtNotch(panel: panel, geom: currentGeom, screen: screen, height: h, animate: true)
-    }
 
     private func panelWidth(geom: NotchGeometry, screen: NSScreen) -> CGFloat {
         let wingWidth: CGFloat = 150
@@ -103,11 +86,11 @@ final class PanelWindowController {
         return min(total, screen.frame.width - 40)
     }
 
-    private func positionAtNotch(panel: NSPanel, geom: NotchGeometry, screen: NSScreen, height: CGFloat, animate: Bool) {
+    private func position(panel: NSPanel, geom: NotchGeometry, screen: NSScreen) {
         let screenFrame = screen.frame
         let width = panelWidth(geom: geom, screen: screen)
         let x = screenFrame.midX - width / 2
-        let y = screenFrame.maxY - height
-        panel.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true, animate: animate)
+        let y = screenFrame.maxY - fixedPanelHeight
+        panel.setFrame(NSRect(x: x, y: y, width: width, height: fixedPanelHeight), display: true, animate: false)
     }
 }
