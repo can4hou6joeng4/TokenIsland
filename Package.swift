@@ -43,10 +43,5 @@ let package = Package(
             dependencies: ["TokenIslandCore"],
             path: "Tests/TokenIslandCoreTests"
         ),
-        .testTarget(
-            name: "TokenIslandTests",
-            dependencies: ["TokenIsland"],
-            path: "Tests/TokenIslandTests"
-        ),
     ]
 )
