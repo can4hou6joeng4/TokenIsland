@@ -16,3 +16,9 @@ build/
 .idea/
 
 Package.resolved
+
+# Local AI-agent context docs — kept out of version control intentionally
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+.cursorrules
