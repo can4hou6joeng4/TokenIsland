@@ -27,7 +27,7 @@ final class AppState: ObservableObject {
         case .permissionRequest:
             session.status = .waitingForPermission
         case .questionAsked:
-            session.status = .waitingForAnswer
+            session.status = .running
         }
 
         if let idx = idx {
@@ -36,7 +36,12 @@ final class AppState: ObservableObject {
             sessions.append(session)
         }
 
-        sessions.sort { $0.lastEventAt > $1.lastEventAt }
+        sessions.sort { lhs, rhs in
+            if lhs.isPendingInteraction != rhs.isPendingInteraction {
+                return lhs.isPendingInteraction
+            }
+            return lhs.lastEventAt > rhs.lastEventAt
+        }
         pruneStale()
     }
 
@@ -46,7 +51,9 @@ final class AppState: ObservableObject {
 
     private func pruneStale(maxAge: TimeInterval = 60 * 60 * 4) {
         let cutoff = Date().addingTimeInterval(-maxAge)
-        sessions.removeAll { $0.status == .finished && $0.lastEventAt < cutoff }
+        sessions.removeAll {
+            ($0.status == .finished || $0.isPendingInteraction) && $0.lastEventAt < cutoff
+        }
     }
 
     var activeSessionCount: Int {
@@ -54,8 +61,12 @@ final class AppState: ObservableObject {
     }
 
     var hasPendingInteraction: Bool {
-        sessions.contains {
-            $0.status == .waitingForPermission || $0.status == .waitingForAnswer
-        }
+        sessions.contains { $0.isPendingInteraction }
+    }
+}
+
+private extension SessionInfo {
+    var isPendingInteraction: Bool {
+        status == .waitingForPermission || status == .waitingForAnswer
     }
 }

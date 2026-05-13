@@ -11,19 +11,23 @@
 - ✅ `HookServer` Unix-domain socket listener
 - ✅ `TokenUsageStore` background sampler (60s refresh)
 - ✅ Today row in notch (Claude + Codex compact totals)
+- ✅ Claude Code hook installer + uninstaller (managed `~/.claude/settings.json` entries)
+- ✅ Codex CLI hook installer + uninstaller (managed `$CODEX_HOME/hooks.json` entries)
+- ✅ `TokenIslandBridge` hook forwarding into the app socket
+- ✅ `build.sh` producing a universal `.app` bundle + `.dmg`
+- ✅ GitHub Actions release workflow
+- ✅ Pre-flight `doctor` CLI (paths + permissions check)
+- ✅ `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`
+- ✅ Apple Silicon local run script (`script/build_and_run.sh`)
+- ✅ Sparkle updater guard for missing or placeholder appcast URLs
 
 ## Next
 
 - [ ] Codex jsonl incremental cache (current cold scan ~16s on 145 files)
-- [ ] Claude Code hook installer + uninstaller (write to `~/.claude/settings.json` hooks block)
-- [ ] Codex CLI integration — either AppServer client or polling fallback
-- [ ] `TokenIslandBridge` end-to-end: hook script → bridge → socket → AppState
 - [ ] 7-day stacked bar chart on panel expansion (Swift Charts)
 - [ ] Settings window (General / Behavior / Appearance / Hooks / About)
 - [ ] Sparkle auto-update wired with `appcast.xml`
-- [ ] `build.sh` producing universal `.app` bundle + `.dmg`
-- [ ] GitHub Actions release workflow
 - [ ] Localized strings (en + zh-Hans)
 - [ ] Mascot animations for Claude / Codex
-- [ ] Pre-flight `doctor` CLI (paths + permissions check)
-- [ ] `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`
+- [ ] Hook installer fixture tests for JSON/TOML round-trips
+- [ ] End-to-end install smoke test against temporary Claude/Codex homes

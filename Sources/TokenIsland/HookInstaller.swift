@@ -68,13 +68,44 @@ enum HookInstaller {
     }
 
     private static func locateBridgeBinary() -> URL? {
-        let exec = Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("tokenisland-bridge")
-        if FileManager.default.isExecutableFile(atPath: exec.path) { return exec }
-        if let mainExecutable = Bundle.main.executableURL {
-            let sibling = mainExecutable.deletingLastPathComponent().appendingPathComponent("tokenisland-bridge")
-            if FileManager.default.isExecutableFile(atPath: sibling.path) { return sibling }
+        for candidate in bridgeCandidatePaths() {
+            if FileManager.default.isExecutableFile(atPath: candidate.path) {
+                return candidate
+            }
         }
         return nil
+    }
+
+    static func bridgeCandidatePaths(
+        bundleURL: URL = Bundle.main.bundleURL,
+        executableURL: URL? = Bundle.main.executableURL
+    ) -> [URL] {
+        var candidates: [URL] = []
+        var seen = Set<String>()
+
+        func append(_ url: URL) {
+            guard seen.insert(url.path).inserted else { return }
+            candidates.append(url)
+        }
+
+        if bundleURL.pathExtension == "app" {
+            append(bundleURL.appendingPathComponent("Contents/Helpers/tokenisland-bridge"))
+            append(bundleURL.appendingPathComponent("Contents/MacOS/tokenisland-bridge"))
+        }
+
+        append(bundleURL.deletingLastPathComponent().appendingPathComponent("tokenisland-bridge"))
+
+        if let executableURL {
+            let executableDir = executableURL.deletingLastPathComponent()
+            append(executableDir.appendingPathComponent("tokenisland-bridge"))
+
+            let contentsDir = executableDir.deletingLastPathComponent()
+            if contentsDir.lastPathComponent == "Contents" {
+                append(contentsDir.appendingPathComponent("Helpers/tokenisland-bridge"))
+            }
+        }
+
+        return candidates
     }
 }
 

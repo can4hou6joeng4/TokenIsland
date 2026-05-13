@@ -20,7 +20,7 @@ TokenIsland is the **two-CLI** distillation: Claude + Codex only, no App Store, 
 
 ## Status
 
-🚧 **Pre-alpha.** Notch panel renders, jsonl parser works on real data, hook IPC is scaffolded — Claude/Codex hook installers and Sparkle auto-update still pending. See [`docs/ROADMAP.md`](./docs/ROADMAP.md).
+🚧 **Pre-alpha.** Notch panel renders, jsonl parser works on real data, hook IPC is scaffolded, and reversible Claude/Codex hook installation exists. Sparkle auto-update remains pre-release wiring. See [`docs/ROADMAP.md`](./docs/ROADMAP.md).
 
 ## Quick run (from source)
 
@@ -37,6 +37,24 @@ There is also a one-shot CLI verifier that prints what the parser sees:
 
 ```bash
 swift run TokenIslandVerify
+```
+
+On Apple Silicon machines, the project includes a local run script that forces
+native `arm64` SwiftPM builds and launches a staged `.app` bundle. Development
+builds do not start Sparkle unless `SUFeedURL` is configured with a real HTTPS
+appcast URL:
+
+```bash
+./script/build_and_run.sh          # build and launch dist/TokenIsland.app
+./script/build_and_run.sh --verify # launch and assert the process is running
+```
+
+Optional hook-management commands:
+
+```bash
+swift run TokenIsland install     # add tokenisland-managed hooks
+swift run TokenIsland uninstall   # remove tokenisland-managed hooks
+swift run TokenIsland doctor      # print install state and paths
 ```
 
 ## First launch (DMG / Gatekeeper)

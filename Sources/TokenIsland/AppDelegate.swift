@@ -25,11 +25,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         tokenStore.startBackgroundSampling()
 
-        updaterController = SPUStandardUpdaterController(
-            startingUpdater: true,
-            updaterDelegate: nil,
-            userDriverDelegate: nil
-        )
+        if SparkleConfiguration.shouldStartUpdater() {
+            updaterController = SPUStandardUpdaterController(
+                startingUpdater: true,
+                updaterDelegate: nil,
+                userDriverDelegate: nil
+            )
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {

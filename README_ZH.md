@@ -38,6 +38,16 @@ swift run TokenIsland doctor      # 打印安装状态和路径
 swift run TokenIslandVerify       # 验证 parser 在本机数据上的输出
 ```
 
+Apple Silicon 机器建议使用项目内置开发运行脚本。它会强制走原生
+`arm64` SwiftPM 构建，并以 `.app` bundle 方式启动，避免 Rosetta shell
+影响默认构建架构。开发构建不会启动 Sparkle，除非 `SUFeedURL` 已配置为
+真实 HTTPS appcast 地址：
+
+```bash
+./script/build_and_run.sh          # 构建并启动 dist/TokenIsland.app
+./script/build_and_run.sh --verify # 启动后确认进程存在
+```
+
 ## 首次启动（DMG / Gatekeeper）
 
 TokenIsland 使用 **ad-hoc 签名**，不走 Apple Developer ID 流程（刻意避开 $99/年的 Developer Program）。在干净的 Mac 上从 Finder 双击 `TokenIsland.app` 首次启动时，会弹出*"TokenIsland 无法打开，因为 Apple 无法检查它是否包含恶意软件"*的对话框。

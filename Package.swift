@@ -23,10 +23,7 @@ let package = Package(
                 "TokenIslandCore",
                 .product(name: "Sparkle", package: "Sparkle"),
             ],
-            path: "Sources/TokenIsland",
-            resources: [
-                .copy("Resources")
-            ]
+            path: "Sources/TokenIsland"
         ),
         .executableTarget(
             name: "TokenIslandBridge",
@@ -42,6 +39,11 @@ let package = Package(
             name: "TokenIslandCoreTests",
             dependencies: ["TokenIslandCore"],
             path: "Tests/TokenIslandCoreTests"
+        ),
+        .testTarget(
+            name: "TokenIslandAppTests",
+            dependencies: ["TokenIsland"],
+            path: "Tests/TokenIslandAppTests"
         ),
     ]
 )
