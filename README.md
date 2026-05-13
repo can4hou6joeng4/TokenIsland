@@ -25,7 +25,7 @@ TokenIsland is the **two-CLI** distillation: Claude + Codex only, no App Store, 
 ## Quick run (from source)
 
 ```bash
-git clone https://github.com/<owner>/TokenIsland.git
+git clone https://github.com/can4hou6joeng4/TokenIsland.git
 cd TokenIsland
 swift run TokenIsland          # launches the menu-bar-less notch app
 ```

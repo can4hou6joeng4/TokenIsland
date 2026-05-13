@@ -24,7 +24,7 @@ TokenIsland 驻留在 MacBook 刘海屏区域，实时展示两件事：
 ## 快速开始（从源码）
 
 ```bash
-git clone https://github.com/<owner>/TokenIsland.git
+git clone https://github.com/can4hou6joeng4/TokenIsland.git
 cd TokenIsland
 swift run TokenIsland          # 启动刘海屏面板，无副作用
 ```
