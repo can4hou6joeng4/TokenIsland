@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Actions CI and Release workflows.
 - Apple Silicon development run script that forces native `arm64` SwiftPM builds and launches a staged `.app` bundle.
 - Codex environment Run action wired to `script/build_and_run.sh`.
+- Generated TokenIsland app icon resources for release bundles.
 
 ### Notes
 - Hook installer writes JSON via `JSONSerialization` and currently re-orders keys when round-tripping. Round-trip is **semantically** equal to the input; byte-level minimal-diff write is on the roadmap.
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - `build.sh` now embeds `Sparkle.framework` into `Contents/Frameworks/` and adds the `@executable_path/../Frameworks` rpath. Without this the .app bundle launched from the DMG dyld-failed because `@rpath/Sparkle.framework/...` could not be resolved.
+- `build.sh` now copies `Resources/AppIcon.icns` into the app bundle so Finder and Launch Services can display the app icon referenced by `Info.plist`.
 - `TokenIsland install` now checks packaged `.app/Contents/Helpers/tokenisland-bridge`, matching the DMG bundle layout.
 - Removed the stale SwiftPM `Resources` declaration so clean builds no longer warn about a missing resource directory.
 - Sparkle updater now stays disabled when `SUFeedURL` is missing, invalid, or still using placeholder release metadata.
