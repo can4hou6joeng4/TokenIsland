@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SwiftPM project skeleton with `TokenIslandCore`, `TokenIsland`, `TokenIslandBridge`, and `TokenIslandVerify` targets.
 - Claude jsonl parser (`Sources/TokenIslandCore/Parsing/ClaudeJsonlParser.swift`).
 - Codex jsonl parser (`Sources/TokenIslandCore/Parsing/CodexJsonlParser.swift`).
+- File-level token usage cache for Claude and Codex jsonl scans, persisted under the user cache directory to avoid full rescans after app restart.
 - Notch panel UI (`NotchPanelView`) with idle/expanded states and a Today total row.
 - `HookServer` Unix-domain socket IPC, listening at `/tmp/tokenisland-<uid>.sock`.
 - `HookInstaller` that safely merges hook entries into `~/.claude/settings.json` and `$CODEX_HOME/hooks.json`, with reversible uninstall.
@@ -27,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - `build.sh` now embeds `Sparkle.framework` into `Contents/Frameworks/` and adds the `@executable_path/../Frameworks` rpath. Without this the .app bundle launched from the DMG dyld-failed because `@rpath/Sparkle.framework/...` could not be resolved.
 - `build.sh` now copies `Resources/AppIcon.icns` into the app bundle so Finder and Launch Services can display the app icon referenced by `Info.plist`.
+- Token usage refreshes now reuse cached per-file scan results, removing repeated CPU spikes from unchanged large Claude and Codex session logs.
 - `TokenIsland install` now checks packaged `.app/Contents/Helpers/tokenisland-bridge`, matching the DMG bundle layout.
 - Removed the stale SwiftPM `Resources` declaration so clean builds no longer warn about a missing resource directory.
 - Sparkle updater now stays disabled when `SUFeedURL` is missing, invalid, or still using placeholder release metadata.
