@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 public struct TokenUsageScanner {
@@ -75,7 +76,7 @@ public struct TokenUsageScanner {
         }
         return caches
             .appendingPathComponent("dev.tokenisland.app", isDirectory: true)
-            .appendingPathComponent("token-usage-cache-v1.json")
+            .appendingPathComponent("token-usage-cache-v2.json")
     }
 }
 
@@ -93,15 +94,30 @@ private final class TokenUsageFileCache: @unchecked Sendable {
     private struct FileIdentity: Codable, Equatable {
         let size: Int
         let modificationTime: TimeInterval
+        let headHashHex: String
+
+        static let headHashWindow = 4096
 
         init?(file: URL) {
             guard let values = try? file.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey]),
                   let size = values.fileSize,
-                  let modificationDate = values.contentModificationDate
+                  let modificationDate = values.contentModificationDate,
+                  let headHashHex = Self.computeHeadHash(file: file, fileSize: size)
             else { return nil }
 
             self.size = size
             self.modificationTime = modificationDate.timeIntervalSinceReferenceDate
+            self.headHashHex = headHashHex
+        }
+
+        private static func computeHeadHash(file: URL, fileSize: Int) -> String? {
+            guard let handle = try? FileHandle(forReadingFrom: file) else { return nil }
+            defer { try? handle.close() }
+            let limit = min(fileSize, headHashWindow)
+            let data = (try? handle.read(upToCount: limit)) ?? Data()
+            return SHA256.hash(data: data)
+                .map { String(format: "%02x", $0) }
+                .joined()
         }
     }
 
@@ -115,7 +131,7 @@ private final class TokenUsageFileCache: @unchecked Sendable {
         let entries: [String: Entry]
     }
 
-    private static let schemaVersion = 1
+    private static let schemaVersion = 2
 
     private let lock = NSLock()
     private let storageURL: URL?

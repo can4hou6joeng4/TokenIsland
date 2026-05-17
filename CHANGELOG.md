@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `build.sh` now embeds `Sparkle.framework` into `Contents/Frameworks/` and adds the `@executable_path/../Frameworks` rpath. Without this the .app bundle launched from the DMG dyld-failed because `@rpath/Sparkle.framework/...` could not be resolved.
 - `build.sh` now copies `Resources/AppIcon.icns` into the app bundle so Finder and Launch Services can display the app icon referenced by `Info.plist`.
 - Token usage refreshes now reuse cached per-file scan results, removing repeated CPU spikes from unchanged large Claude and Codex session logs.
+- Token usage cache identity now mixes a SHA-256 over the first 4 KB of each scanned file alongside size and modification time, so same-size in-place overwrites no longer feed stale snapshots into the notch panel. Cache file rolled to schema v2 (`token-usage-cache-v2.json`); see `docs/adr/0001-token-usage-cache-identity.md`.
 - `TokenIsland install` now checks packaged `.app/Contents/Helpers/tokenisland-bridge`, matching the DMG bundle layout.
 - Removed the stale SwiftPM `Resources` declaration so clean builds no longer warn about a missing resource directory.
 - Sparkle updater now stays disabled when `SUFeedURL` is missing, invalid, or still using placeholder release metadata.
