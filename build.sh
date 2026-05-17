@@ -13,6 +13,7 @@ BUILD_DIR=".build/release"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 DIST_DIR="dist"
 INFO_PLIST="Info.plist"
+APP_ICON="Resources/AppIcon.icns"
 
 if [ -d /Applications/Xcode.app/Contents/Developer ]; then
     export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
@@ -57,6 +58,12 @@ lipo -create "$ARM_DIR/$BRIDGE_NAME" "$X86_DIR/$BRIDGE_NAME" \
      -output "$APP_BUNDLE/Contents/Helpers/$BRIDGE_NAME"
 
 cp "$INFO_PLIST" "$APP_BUNDLE/Contents/Info.plist"
+if [ -f "$APP_ICON" ]; then
+    cp "$APP_ICON" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+else
+    echo "Missing app icon at $APP_ICON — run script/generate_app_icon.swift" >&2
+    exit 1
+fi
 
 # Copy SwiftPM-emitted resource bundle if any
 if [ -d "$ARM_DIR/${APP_NAME}_${APP_NAME}.bundle" ]; then
